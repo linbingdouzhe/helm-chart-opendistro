@@ -1,0 +1,23 @@
+---
+
+clusterName: "opendistro"
+nodeGroup: "master"
+
+roles:
+  master: "true"
+  ingest: "false"
+  data: "false"
+
+volumeClaimTemplate:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: slow
+
+service:
+  type: NodePort
+  nodePort: 31599
+  annotations: {}
+  httpPortName: http
+  transportPortName: transport

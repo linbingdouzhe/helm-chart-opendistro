@@ -1,0 +1,310 @@
+---
+# Elasticsearch roles that will be applied to this nodeGroup
+# These will be set as environment variables. E.g. node.master=true
+
+replicas: 3
+minimumMasterNodes: 1
+
+esMajorVersion: ""
+
+# Allows you to add any config files in /usr/share/elasticsearch/config/
+# such as elasticsearch.yml and log4j2.properties
+ELASTIC_USERNAME: admin
+ELASTIC_PASSWORD: z1zNWKSXtUQKwOMr
+esConfig: 
+  elasticsearch.yml: |
+    path:
+      data: /usr/share/elasticsearch/data
+      logs: /usr/share/elasticsearch/logs
+
+    http:
+      compression: true
+
+    indices.fielddata.cache.size: 40%
+    indices.breaker.fielddata.limit: 75%
+    # TLS Configuration Transport Layer
+    opendistro_security.ssl.transport.pemcert_filepath: elk-crt.pem
+    opendistro_security.ssl.transport.pemkey_filepath: elk-key.pem
+    opendistro_security.ssl.transport.pemtrustedcas_filepath: elk-root-ca.pem
+    opendistro_security.ssl.transport.enforce_hostname_verification: false
+
+    # TLS Configuration REST Layer
+    opendistro_security.ssl.http.enabled: true
+    opendistro_security.ssl.http.pemcert_filepath: elk-crt.pem
+    opendistro_security.ssl.http.pemkey_filepath: elk-key.pem
+    opendistro_security.ssl.http.pemtrustedcas_filepath: elk-root-ca.pem
+
+    # Demo Certificate Option Disabled
+    opendistro_security.allow_unsafe_democertificates: false
+
+    opendistro_security.allow_default_init_securityindex: false
+
+    opendistro_security.authcz.admin_dn:
+      - 'CN=admin.wisersops.internal,OU=SSL,O=SSL,L=bj,ST=bj,C=cn'
+    opendistro_security.nodes_dn:
+      - 'CN=opendistro.wisersops.internal,OU=SSL,O=SSL,L=bj,ST=bj,C=cn'
+      - 'CN=opendistro.wisersops.internal,OU=SSL,O=SSL,L=bj,ST=bj,C=cn'
+      - 'CN=opendistro.wisersops.internal,OU=SSL,O=SSL,L=bj,ST=bj,C=cn'
+
+
+    opendistro_security.audit.type: internal_elasticsearch
+    opendistro_security.enable_snapshot_restore_privilege: true
+    opendistro_security.check_snapshot_restore_write_privileges: true
+    opendistro_security.restapi.roles_enabled: ["all_access", "security_rest_api_access"]
+    cluster.routing.allocation.disk.threshold_enabled: false
+    opendistro_security.audit.config.disabled_rest_categories: NONE
+    opendistro_security.audit.config.disabled_transport_categories: NONE
+
+  logging.yml: |
+    # you can override this using by setting a system property, for example -Des.logger.level=DEBUG
+    es.logger.level: INFO
+    rootLogger: ${es.logger.level}, console
+    logger:
+      # log action execution errors for easier debugging
+      action: DEBUG
+      # reduce the logging for aws, too much is logged under the default INFO
+      com.amazonaws: WARN
+    appender:
+      console:
+        type: console
+        layout:
+          type: consolePattern
+          conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"
+# Extra environment variables to append to this nodeGroup
+# This will be appended to the current 'env:' key. You can use any of the kubernetes env
+# syntax here
+extraEnvs: []
+#  - name: MY_ENVIRONMENT_VAR
+#    value: the_value_goes_here
+
+# A list of secrets and their paths to mount inside the pod
+# This is useful for mounting certificates for security and for mounting
+# the X-Pack license
+secretMounts: 
+  - path: /usr/share/elasticsearch/config/elk-crt.pem
+    name: certs
+    subPath: elk-crt.pem
+  - path: /usr/share/elasticsearch/config/elk-key.pem
+    name: certs
+    subPath: elk-key.pem
+  - path: /usr/share/elasticsearch/config/elk-root-ca.pem
+    name: certs
+    subPath: elk-root-ca.pem
+  - path: /usr/share/elasticsearch/config/admin-crt.pem
+    name: certs
+    subPath: admin-crt.pem
+  - path: /usr/share/elasticsearch/config/admin-key.pem
+    name: certs
+    subPath: admin-key.pem
+  - path: /usr/share/elasticsearch/config/admin-root-ca.pem
+    name: certs
+    subPath: admin-root-ca.pem
+
+#  - name: elastic-certificates
+#    secretName: elastic-certificates
+#    path: /usr/share/elasticsearch/config/certs
+
+image: "amazon/opendistro-for-elasticsearch"
+imageTag: "1.2.0"
+imagePullPolicy: "IfNotPresent"
+
+podAnnotations: {}
+  # iam.amazonaws.com/role: es-cluster
+
+# additionals labels
+labels: {}
+
+esJavaOpts: "-Xmx12g -Xms12g"
+
+resources:
+  requests:
+    cpu: "2000m"
+    memory: "24Gi"
+  limits:
+    cpu: "7000m"
+    memory: "60Gi"
+
+initResources: {}
+  # limits:
+  #   cpu: "25m"
+  #   # memory: "128Mi"
+  # requests:
+  #   cpu: "25m"
+  #   memory: "128Mi"
+
+sidecarResources: {}
+  # limits:
+  #   cpu: "25m"
+  #   # memory: "128Mi"
+  # requests:
+  #   cpu: "25m"
+  #   memory: "128Mi"
+
+networkHost: "0.0.0.0"
+
+
+rbac:
+  create: false
+  serviceAccountName: ""
+
+podSecurityPolicy:
+  create: false
+  name: ""
+  spec:
+    privileged: true
+    fsGroup:
+      rule: RunAsAny
+    runAsUser:
+      rule: RunAsAny
+    seLinux:
+      rule: RunAsAny
+    supplementalGroups:
+      rule: RunAsAny
+    volumes:
+      - secret
+      - configMap
+      - persistentVolumeClaim
+
+persistence:
+  enabled: true
+  annotations: {}
+
+extraVolumes: ""
+  # - name: extras
+  #   emptyDir: {}
+
+extraVolumeMounts: ""
+  # - name: extras
+  #   mountPath: /usr/share/extras
+  #   readOnly: true
+
+extraInitContainers: ""
+  #  - name: fixmount
+  #    image: busybox
+  #    command: [ 'sh', '-c', 'chown -R 1000:1000 /usr/share/elasticsearch/data' ]
+  #    volumeMounts:
+  #      - mountPath: /usr/share/elasticsearch/data
+  #        name: 
+# This is the PriorityClass settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+priorityClassName: ""
+
+# By default this will make sure two pods don't end up on the same node
+# Changing this to a region would allow you to spread pods across regions
+antiAffinityTopologyKey: "kubernetes.io/hostname"
+
+# Hard means that by default pods will only be scheduled if there are enough nodes for them
+# and that they will never end up on the same node. Setting this to soft will do this "best effort"
+antiAffinity: "hard"
+
+# This is the node affinity settings as defined in
+# https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#node-affinity-beta-feature
+# nodeAffinity: 
+#   requiredDuringSchedulingIgnoredDuringExecution:
+#     nodeSelectorTerms:
+#     - matchExpressions:
+#       - key: role
+#         operator: In
+#         values:
+#         - elk
+
+# The default is to deploy all pods serially. By setting this to parallel all pods are started at
+# the same time when bootstrapping the cluster
+podManagementPolicy: "Parallel"
+
+protocol: https
+httpPort: 9200
+transportPort: 9300
+
+#service:
+#  type: NodePort
+#  nodePort: 31698
+#  annotations: {}
+#  httpPortName: http
+#  transportPortName: transport
+
+updateStrategy: RollingUpdate
+
+# This is the max unavailable setting for the pod disruption budget
+# The default value of 1 will make sure that kubernetes won't allow more than 1
+# of your pods to be unavailable during maintenance
+maxUnavailable: 1
+
+podSecurityContext:
+  fsGroup: 0
+  runAsUser: 0
+
+# The following value is deprecated,
+# please use the above podSecurityContext.fsGroup instead
+fsGroup: ""
+
+#securityContext:
+#  capabilities:
+#    drop:
+#    - ALL
+#  # readOnlyRootFilesystem: true
+#  runAsNonRoot: false
+#  runAsUser: 0
+
+# How long to wait for elasticsearch to stop gracefully
+terminationGracePeriod: 120
+
+sysctlVmMaxMapCount: 262144
+
+readinessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 3
+  timeoutSeconds: 5
+
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html#request-params wait_for_status
+clusterHealthCheckParams: "wait_for_status=green&timeout=1s"
+
+## Use an alternate scheduler.
+## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
+##
+schedulerName: ""
+
+imagePullSecrets: []
+nodeSelector: {}
+tolerations:
+- key: "role"
+  operator: "Equal"
+  value: "elk"
+  effect: "NoExecute"
+
+# Enabling this will publically expose your Elasticsearch instance.
+# Only enable this if you have security enabled on your cluster
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  path: /
+  hosts:
+    - chart-example.local
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+nameOverride: ""
+fullnameOverride: ""
+
+# https://github.com/elastic/helm-charts/issues/63
+masterTerminationFix: false
+
+lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "echo Hello from the postStart handler > /usr/share/message"]
+  # postStart:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "echo Hello from the postStart handler > /usr/share/message"]
+
+sysctlInitContainer:
+  enabled: true
+
+keystore: []
+
